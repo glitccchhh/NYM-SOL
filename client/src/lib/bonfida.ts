@@ -1,14 +1,21 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getConnection } from './solana';
+import {
+  getHashedName,
+  getNameAccountKey,
+  NameRegistryState,
+  getTwitterRegistry,
+  Record,
+  getRecord,
+  getDomainKeySync,
+  reverseLookup
+} from '@bonfida/spl-name-service';
 
 // The Bonfida SNS program ID
 export const SNS_PROGRAM_ID = new PublicKey('namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX');
 
 // Root domain for .sol TLD (Top Level Domain)
 export const ROOT_DOMAIN_KEY = new PublicKey('58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9JPkx');
-
-// List of premium or known registered domains for testing
-const PREMIUM_DOMAINS = ['crypto', 'solana', 'nft', 'defi', 'wallet', 'token', 'dao', 'web3'];
 
 /**
  * Check if a domain is available (not already registered)
@@ -17,29 +24,25 @@ const PREMIUM_DOMAINS = ['crypto', 'solana', 'nft', 'defi', 'wallet', 'token', '
  */
 export const checkDomainAvailability = async (domain: string): Promise<boolean> => {
   try {
-    // For development/demo purposes
-    // In a production app, this would use the @bonfida/spl-name-service library
-    // to check domain availability on the Solana blockchain
-    
-    // Domain validation checks
     if (!domain || domain.length < 1) {
       throw new Error('Domain name is required');
     }
     
-    // Check against list of known premium/registered domains
-    const isDomainPremium = PREMIUM_DOMAINS.includes(domain.toLowerCase());
+    const connection = getConnection();
+    const hashedName = await getHashedName(domain);
+    const nameAccountKey = await getNameAccountKey(hashedName, undefined, ROOT_DOMAIN_KEY);
     
-    // Some heuristics for the demo:
-    // - Common dictionary words under 5 chars are likely registered
-    // - Premium domains are registered
-    const isLikelyRegistered = 
-      isDomainPremium || 
-      (domain.length <= 4 && /^[a-z]+$/.test(domain));
-      
-    return !isLikelyRegistered;
+    try {
+      await NameRegistryState.retrieve(connection, nameAccountKey);
+      return false; // Domain exists, so it's not available
+    } catch (err) {
+      // If we get here, the domain does not exist in the registry
+      return true; // Domain is available
+    }
   } catch (error) {
     console.error('Error checking domain availability:', error);
-    throw error;
+    // For better UX, return false on error (safer to assume unavailable)
+    return false;
   }
 };
 
@@ -50,117 +53,158 @@ export const checkDomainAvailability = async (domain: string): Promise<boolean> 
  */
 export const getDomainOwner = async (domain: string): Promise<string | null> => {
   try {
-    // For development/demo purposes
-    // In a production app, this would use the @bonfida/spl-name-service library
-    // to get the domain owner from the Solana blockchain
+    const connection = getConnection();
+    const hashedName = await getHashedName(domain);
+    const nameAccountKey = await getNameAccountKey(hashedName, undefined, ROOT_DOMAIN_KEY);
     
-    // Check if domain is registered first
-    const isAvailable = await checkDomainAvailability(domain);
-    if (isAvailable) {
+    try {
+      // NameRegistryState.retrieve returns the registry data directly
+      const registry = await NameRegistryState.retrieve(connection, nameAccountKey);
+      // Registry has an owner field which is a PublicKey
+      return registry.owner.toBase58();
+    } catch (err) {
       return null; // Domain not registered
     }
-    
-    // For premium domains, return a mock owner address
-    if (PREMIUM_DOMAINS.includes(domain.toLowerCase())) {
-      return 'BvzKvn6nUUAYNFGFzqfQ9tBFUdpkADAGzAZFXQqJimJN';
-    }
-    
-    // For other "registered" domains, generate a deterministic owner
-    // just for demo purposes
-    const domainHash = domain.split('').reduce((hash, char) => {
-      return ((hash << 5) - hash) + char.charCodeAt(0);
-    }, 0);
-    
-    // Use a prefix that looks like a Solana address
-    return `${Math.abs(domainHash) % 1000}Hw7...X4qV`;
   } catch (error) {
     console.error('Error getting domain owner:', error);
-    throw error;
+    return null;
   }
 };
 
-// Register a domain
+/**
+ * Register a domain (requires wallet connection and transaction)
+ * @param domain The domain name without '.sol' extension
+ * @param ownerPublicKey The public key of the wallet that will own the domain
+ * @returns Boolean indicating success
+ */
 export const registerDomain = async (domain: string, ownerPublicKey: string): Promise<boolean> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to register the domain on the blockchain
+    // This requires a connected wallet and transaction signature
+    // Would need to use the Solana wallet adapter to create a transaction
     
-    // Simulate transaction delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Return true to simulate successful registration
-    return true;
+    // For now, we return false as this isn't implemented yet
+    console.warn('Domain registration requires wallet connection and is not implemented');
+    return false;
   } catch (error) {
     console.error('Error registering domain:', error);
-    throw error;
+    return false;
   }
 };
 
-// Get domain record value (Twitter, IPFS, etc.)
+/**
+ * Get a specific record for a domain
+ * @param domain The domain name without '.sol' extension
+ * @param recordType The type of record (twitter, website, etc.)
+ * @returns The record value or null if not found
+ */
 export const getDomainRecord = async (domain: string, recordType: string): Promise<string | null> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to get domain records from the blockchain
+    const connection = getConnection();
+    const hashedName = await getHashedName(domain);
+    const nameAccountKey = await getNameAccountKey(hashedName, undefined, ROOT_DOMAIN_KEY);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Some mock records for demo purposes
-    const mockRecords: Record<string, Record<string, string>> = {
-      'crypto': {
-        'twitter': 'crypto_official',
-        'ipfs': 'QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco',
-        'website': 'https://example.com',
-        'email': 'contact@example.com',
-        'bio': 'Official crypto domain on Solana'
+    // Special case for Twitter which has its own function
+    if (recordType.toLowerCase() === 'twitter') {
+      try {
+        // Convert PublicKey to string for getTwitterRegistry
+        const nameAccountKeyStr = nameAccountKey.toBase58();
+        const twitter = await getTwitterRegistry(connection, nameAccountKeyStr);
+        // If we get here, twitter exists and is a string
+        return twitter || null;
+      } catch (e) {
+        return null; // No Twitter record found or error
       }
-    };
+    }
     
-    return mockRecords[domain]?.[recordType] || null;
+    // For all other record types
+    try {
+      // Convert PublicKey to string for getRecord
+      const nameAccountKeyStr = nameAccountKey.toBase58();
+      const record = await getRecord(connection, nameAccountKeyStr, recordType);
+      // Return stringified record or null
+      return record ? record.toString() : null;
+    } catch (e) {
+      return null; // Record not found or error
+    }
   } catch (error) {
     console.error('Error getting domain record:', error);
-    throw error;
+    return null;
   }
 };
 
-// Set domain record value
+/**
+ * Set a domain record (requires wallet connection and transaction)
+ * @param domain The domain name without '.sol' extension
+ * @param recordType The type of record to set
+ * @param value The value to set for the record
+ * @returns Boolean indicating success
+ */
 export const setDomainRecord = async (
   domain: string, 
   recordType: string, 
   value: string
 ): Promise<boolean> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to set domain records on the blockchain
+    // This requires a connected wallet and transaction signature
+    // Would need to use the Solana wallet adapter to create a transaction
     
-    // Simulate transaction delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Return true to simulate successful update
-    return true;
+    // For now, we return false as this isn't implemented yet
+    console.warn('Setting records requires wallet connection and is not implemented');
+    return false;
   } catch (error) {
     console.error('Error setting domain record:', error);
-    throw error;
+    return false;
   }
 };
 
-// Transfer domain ownership
+/**
+ * Transfer domain ownership (requires wallet connection and transaction)
+ * @param domain The domain name without '.sol' extension
+ * @param currentOwnerPublicKey Current owner's public key
+ * @param newOwnerPublicKey New owner's public key
+ * @returns Boolean indicating success
+ */
 export const transferDomain = async (
   domain: string,
   currentOwnerPublicKey: string,
   newOwnerPublicKey: string
 ): Promise<boolean> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to transfer domain ownership on the blockchain
+    // This requires a connected wallet and transaction signature
+    // Would need to use the Solana wallet adapter to create a transaction
     
-    // Simulate transaction delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Return true to simulate successful transfer
-    return true;
+    // For now, we return false as this isn't implemented yet
+    console.warn('Domain transfer requires wallet connection and is not implemented');
+    return false;
   } catch (error) {
     console.error('Error transferring domain:', error);
-    throw error;
+    return false;
   }
+};
+
+/**
+ * Generate alternative domain suggestions when a domain is taken
+ * @param domain The original domain name that was unavailable
+ * @returns Array of available alternatives
+ */
+export const getSuggestions = async (domain: string): Promise<string[]> => {
+  const suggestions = [
+    `${domain}sol`,
+    `${domain}xyz`,
+    `its${domain}`,
+    `${domain}nft`,
+    `${domain}dao`,
+    `my${domain}`
+  ];
+  
+  const results = await Promise.all(
+    suggestions.map(async (suggestion) => {
+      const available = await checkDomainAvailability(suggestion);
+      return { name: suggestion, available };
+    })
+  );
+  
+  return results
+    .filter(result => result.available)
+    .map(result => result.name);
 };

@@ -1,6 +1,8 @@
 import { Connection, PublicKey, Keypair } from '@solana/web3.js';
 
-// Default RPC endpoint - Use import.meta.env for Vite
+// Default RPC endpoint - Use import.meta.env for Vite or fall back to public RPC
+// Note: For production use, it's recommended to use a dedicated RPC endpoint
+// from providers like Helius, QuickNode, or Alchemy for better reliability
 export const SOLANA_RPC_ENDPOINT = import.meta.env.VITE_SOLANA_RPC_ENDPOINT || 'https://api.mainnet-beta.solana.com';
 
 // Create a connection to Solana
