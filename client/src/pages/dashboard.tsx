@@ -2,9 +2,14 @@ import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Clock, History } from "lucide-react";
 import DomainDetails from "@/components/domain/DomainDetails";
 import TransferDomain from "@/components/domain/TransferDomain";
+import DomainExpirationTracker from "@/components/domain/DomainExpirationTracker";
+import DomainRecordManager from "@/components/domain/DomainRecordManager";
+import TransactionHistory from "@/components/domain/TransactionHistory";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/hooks/use-toast";
 
 // Mock data - In a real app, this would come from the blockchain
 const mockDomains = [
@@ -12,7 +17,7 @@ const mockDomains = [
     id: "1",
     name: "satoshi.sol",
     isActive: true,
-    expiry: "March 15, 2024",
+    expiresAt: "2024-06-15T00:00:00Z",
     records: {
       twitter: "satoshi_nakamoto",
       website: "https://example.com",
@@ -20,13 +25,101 @@ const mockDomains = [
       bio: "Crypto enthusiast and developer in the Solana ecosystem.",
       email: "contact@example.com",
     }
+  },
+  {
+    id: "2",
+    name: "crypto.sol",
+    isActive: true,
+    expiresAt: "2023-12-22T00:00:00Z", // Soon to expire domain
+    records: {
+      twitter: "crypto_official",
+      website: "https://crypto-sol.example",
+      bio: "The official crypto domain on Solana",
+    }
   }
 ];
 
+// Mock transaction history data
+const mockTransactions = [
+  {
+    id: "tx1",
+    type: 'registration' as const,
+    status: 'confirmed' as const,
+    timestamp: "2023-09-15T14:30:00Z",
+    domainName: "satoshi.sol",
+    txHash: "5UfEFyJv6r9nmBrQxQT7yVvq9yUMxBBECQDC6cLHG4KfFpGRNj",
+    fee: 0.5
+  },
+  {
+    id: "tx2",
+    type: 'update' as const,
+    status: 'confirmed' as const,
+    timestamp: "2023-10-20T09:45:00Z",
+    domainName: "satoshi.sol",
+    txHash: "8UfJKLyv7r2nmCrQzGU4yVmq2yZMzVVECQER6cLBG4KbRtGNKp",
+    fee: 0.01
+  },
+  {
+    id: "tx3",
+    type: 'renewal' as const,
+    status: 'processing' as const,
+    timestamp: "2023-11-01T16:20:00Z",
+    domainName: "crypto.sol",
+    txHash: "3KfGPAyv1r7nwCrQzFY9yTvq5yUMzBRFEQHC6fLTR4KdGpLSMj",
+    fee: 0.5
+  }
+];
+
+// Define the interface for a domain based on DomainDetails component requirements
+interface Domain {
+  id: string;
+  name: string;
+  records: {
+    twitter: string;
+    website: string;
+    ipfs: string;
+    bio: string;
+    email: string;
+  };
+}
+
+// Type for our enhanced dashboard domains
+interface EnhancedDomain {
+  id: string;
+  name: string;
+  isActive: boolean;
+  expiresAt: string;
+  records: {
+    twitter?: string;
+    website?: string;
+    ipfs?: string;
+    bio?: string;
+    email?: string;
+    [key: string]: string | undefined;
+  };
+}
+
+// Convert to proper Domain type for DomainDetails
+const convertToDomainType = (domain: EnhancedDomain): Domain => {
+  return {
+    id: domain.id,
+    name: domain.name,
+    records: {
+      twitter: domain.records.twitter || "",
+      website: domain.records.website || "",
+      ipfs: domain.records.ipfs || "",
+      bio: domain.records.bio || "",
+      email: domain.records.email || ""
+    }
+  };
+};
+
 export default function Dashboard() {
   const { connected } = useWallet();
-  const [domains] = useState(mockDomains);
+  const { toast } = useToast();
+  const [domains] = useState<EnhancedDomain[]>(mockDomains);
   const [selectedDomain, setSelectedDomain] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("details");
   const [isEditing, setIsEditing] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
 
@@ -46,6 +139,22 @@ export default function Dashboard() {
     setSelectedDomain(null);
     setIsEditing(false);
     setIsTransferring(false);
+  };
+  
+  const handleRenewDomain = (domainId: string) => {
+    toast({
+      title: "Renewal initiated",
+      description: `Starting renewal process for domain ID: ${domainId}`,
+    });
+  };
+  
+  const handleSaveRecords = async (records: any) => {
+    // In a real app, this would call an API to save the records on the blockchain
+    toast({
+      title: "Records saved",
+      description: "Domain records have been updated successfully",
+    });
+    return true;
   };
 
   if (!connected) {
@@ -96,7 +205,7 @@ export default function Dashboard() {
                       <span className="w-2 h-2 bg-success rounded-full mr-2"></span>
                       Active
                     </div>
-                    <p className="text-sm text-gray-400 mt-1">Expires: {domain.expiry}</p>
+                    <p className="text-sm text-gray-400 mt-1">Expires: {new Date(domain.expiresAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex space-x-3 mt-4 md:mt-0">
                     <Button variant="outline" size="sm">Set as Default</Button>
@@ -114,10 +223,54 @@ export default function Dashboard() {
           <Button variant="outline" onClick={handleBackToDomains} className="mb-4">
             ← Back to Domains
           </Button>
-          <DomainDetails
-            domain={domains.find(d => d.id === selectedDomain)!}
-            onTransfer={() => handleTransferDomain(selectedDomain)} 
-          />
+          
+          <Tabs defaultValue="details" className="w-full mb-8">
+            <TabsList className="w-full">
+              <TabsTrigger value="details" onClick={() => setActiveTab("details")} className="flex-1">
+                Domain Details
+              </TabsTrigger>
+              <TabsTrigger value="records" onClick={() => setActiveTab("records")} className="flex-1">
+                Records
+              </TabsTrigger>
+              <TabsTrigger value="expiration" onClick={() => setActiveTab("expiration")} className="flex-1">
+                <Clock className="h-4 w-4 mr-2" />
+                Expiration
+              </TabsTrigger>
+              <TabsTrigger value="history" onClick={() => setActiveTab("history")} className="flex-1">
+                <History className="h-4 w-4 mr-2" />
+                History
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="details" className="mt-6">
+              <DomainDetails
+                domain={convertToDomainType(domains.find(d => d.id === selectedDomain)!)}
+                onTransfer={() => handleTransferDomain(selectedDomain)} 
+              />
+            </TabsContent>
+            
+            <TabsContent value="records" className="mt-6">
+              <DomainRecordManager
+                domainName={domains.find(d => d.id === selectedDomain)!.name}
+                records={domains.find(d => d.id === selectedDomain)!.records}
+                onSave={handleSaveRecords}
+              />
+            </TabsContent>
+            
+            <TabsContent value="expiration" className="mt-6">
+              <DomainExpirationTracker
+                domains={domains}
+                onRenew={handleRenewDomain}
+              />
+            </TabsContent>
+            
+            <TabsContent value="history" className="mt-6">
+              <TransactionHistory
+                transactions={mockTransactions}
+                hasMore={false}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
 
@@ -127,7 +280,7 @@ export default function Dashboard() {
             ← Back to Domains
           </Button>
           <TransferDomain 
-            domain={domains.find(d => d.id === selectedDomain)!} 
+            domain={convertToDomainType(domains.find(d => d.id === selectedDomain)!)}
             onCancel={handleBackToDomains}
           />
         </div>
