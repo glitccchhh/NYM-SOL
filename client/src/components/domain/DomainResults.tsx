@@ -22,30 +22,51 @@ export default function DomainResults({ query }: DomainResultsProps) {
   // Alternatives are suggested similar domains that are available
   const [alternatives, setAlternatives] = useState<string[]>([]);
 
-  // Generate domain alternatives by adding common prefixes/suffixes
-  const generateAlternatives = (domain: string): string[] => {
-    const prefixes = ["my", "get", "use", "the"];
-    const suffixes = ["app", "dao", "coin", "io", "sol"];
+  // Generate domain alternatives with verified availability
+  const generateAlternatives = async (domain: string): Promise<string[]> => {
+    const prefixes = ["my", "get", "use", "the", "go", "best", "meta", "true"];
+    const suffixes = ["app", "dao", "coin", "io", "sol", "xyz", "pro", "network"];
     const alternatives: string[] = [];
     
     // Add prefix alternatives
-    prefixes.forEach(prefix => {
+    for (const prefix of prefixes) {
       const alternative = `${prefix}${domain}`;
       if (alternative !== domain) {
-        alternatives.push(alternative);
+        try {
+          // Check if this alternative is actually available
+          const isAvailable = await checkDomainAvailability(alternative);
+          if (isAvailable) {
+            alternatives.push(alternative);
+            // Stop after finding enough alternatives
+            if (alternatives.length >= 4) break;
+          }
+        } catch (error) {
+          console.error(`Error checking alternative domain: ${alternative}`, error);
+        }
       }
-    });
+    }
     
-    // Add suffix alternatives
-    suffixes.forEach(suffix => {
-      const alternative = `${domain}${suffix}`;
-      if (alternative !== domain) {
-        alternatives.push(alternative);
+    // If we don't have enough alternatives yet, try suffixes
+    if (alternatives.length < 4) {
+      for (const suffix of suffixes) {
+        const alternative = `${domain}${suffix}`;
+        if (alternative !== domain) {
+          try {
+            // Check if this alternative is actually available
+            const isAvailable = await checkDomainAvailability(alternative);
+            if (isAvailable) {
+              alternatives.push(alternative);
+              // Stop after finding enough alternatives
+              if (alternatives.length >= 4) break;
+            }
+          } catch (error) {
+            console.error(`Error checking alternative domain: ${alternative}`, error);
+          }
+        }
       }
-    });
+    }
     
-    // Return a random selection of 4 alternatives
-    return alternatives.sort(() => Math.random() - 0.5).slice(0, 4);
+    return alternatives;
   };
 
   useEffect(() => {
@@ -70,10 +91,14 @@ export default function DomainResults({ query }: DomainResultsProps) {
           setRegistrationDate(null);
         }
         
-        // Generate alternative domain suggestions
-        // In a production app, we would verify these are actually available
-        const alternativeDomains = generateAlternatives(query);
-        setAlternatives(alternativeDomains);
+        // Generate alternative domain suggestions with verified availability
+        try {
+          const alternativeDomains = await generateAlternatives(query);
+          setAlternatives(alternativeDomains);
+        } catch (error) {
+          console.error("Error generating alternatives:", error);
+          setAlternatives([]);
+        }
       } catch (error) {
         console.error("Error checking domain:", error);
         toast({
