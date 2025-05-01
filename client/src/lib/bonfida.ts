@@ -1,43 +1,92 @@
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getConnection } from './solana';
+import { NameRegistryState, getDomainKey, reverseLookup } from '@bonfida/spl-name-service';
 
 // The Bonfida SNS program ID
 export const SNS_PROGRAM_ID = new PublicKey('namesLPneVptA9Z5rqUDD9tMTWEJwofgaYwp8cawRkX');
 
-// Check if a domain is available
+// Root domain for .sol TLD (Top Level Domain)
+export const ROOT_DOMAIN_KEY = new PublicKey('58PwtjSDuFHuUkYjH9BYnnQKHfwo9reZhC2zMJv9JPkx');
+
+/**
+ * Check if a domain is available (not already registered)
+ * @param domain The domain name without '.sol' extension
+ * @returns True if domain is available, false if already registered
+ */
 export const checkDomainAvailability = async (domain: string): Promise<boolean> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to check domain availability on the blockchain
+    // Get the connection to Solana network
+    const connection = getConnection();
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Get the domain key for the given domain name
+    const { pubkey } = await getDomainKey(domain);
     
-    // Some mock logic for demo purposes
-    return domain.length >= 3 && !['crypto', 'solana', 'nft', 'defi'].includes(domain);
+    // Try to retrieve the domain registry state
+    try {
+      // This will throw if domain doesn't exist
+      await NameRegistryState.retrieve(connection, pubkey);
+      // If we reach here, domain exists
+      return false;
+    } catch (error: any) {
+      // If the error is "Account does not exist", domain is available
+      if (error?.message?.includes('Account does not exist')) {
+        return true;
+      }
+      // Other errors should be rethrown
+      throw error;
+    }
   } catch (error) {
     console.error('Error checking domain availability:', error);
+    
+    // For development fallback, if network isn't available
+    if (!import.meta.env.PROD) {
+      console.warn('Using fallback for domain availability check during development');
+      return domain.length >= 3 && !['crypto', 'solana', 'nft', 'defi'].includes(domain);
+    }
+    
     throw error;
   }
 };
 
-// Get domain owner
+/**
+ * Get the owner of a domain
+ * @param domain The domain name without '.sol' extension
+ * @returns The owner's public key as string, or null if domain not registered
+ */
 export const getDomainOwner = async (domain: string): Promise<string | null> => {
   try {
-    // Mock implementation - In a real app, this would use Bonfida/SNS API
-    // to get the domain owner from the blockchain
+    // Get the connection to Solana network
+    const connection = getConnection();
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Get the domain key for the given domain name
+    const { pubkey } = await getDomainKey(domain);
     
-    // Some mock logic for demo purposes
-    if (['crypto', 'solana', 'nft', 'defi'].includes(domain)) {
-      return '5Hw7...X4qV'; // Mock address
+    try {
+      // Retrieve the domain registry state
+      const { registry } = await NameRegistryState.retrieve(connection, pubkey);
+      
+      // Return owner's public key
+      return registry.owner.toBase58();
+    } catch (error: any) {
+      // If the error is "Account does not exist", domain is not registered
+      if (error?.message?.includes('Account does not exist')) {
+        return null;
+      }
+      // Other errors should be rethrown
+      throw error;
     }
-    
-    return null; // Domain not registered
   } catch (error) {
     console.error('Error getting domain owner:', error);
+    
+    // For development fallback, if network isn't available
+    if (!import.meta.env.PROD) {
+      console.warn('Using fallback for domain owner check during development');
+      if (['crypto', 'solana', 'nft', 'defi'].includes(domain)) {
+        return '5Hw7...X4qV'; // Mock address for development
+      }
+      return null;
+    }
+    
     throw error;
   }
 };

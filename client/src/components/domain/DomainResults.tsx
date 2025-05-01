@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, PlusCircle } from "lucide-react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { checkDomainAvailability, getDomainOwner } from "@/lib/bonfida";
 
 interface DomainResultsProps {
   query: string;
@@ -21,34 +22,70 @@ export default function DomainResults({ query }: DomainResultsProps) {
   // Alternatives are suggested similar domains that are available
   const [alternatives, setAlternatives] = useState<string[]>([]);
 
+  // Generate domain alternatives by adding common prefixes/suffixes
+  const generateAlternatives = (domain: string): string[] => {
+    const prefixes = ["my", "get", "use", "the"];
+    const suffixes = ["app", "dao", "coin", "io", "sol"];
+    const alternatives: string[] = [];
+    
+    // Add prefix alternatives
+    prefixes.forEach(prefix => {
+      const alternative = `${prefix}${domain}`;
+      if (alternative !== domain) {
+        alternatives.push(alternative);
+      }
+    });
+    
+    // Add suffix alternatives
+    suffixes.forEach(suffix => {
+      const alternative = `${domain}${suffix}`;
+      if (alternative !== domain) {
+        alternatives.push(alternative);
+      }
+    });
+    
+    // Return a random selection of 4 alternatives
+    return alternatives.sort(() => Math.random() - 0.5).slice(0, 4);
+  };
+
   useEffect(() => {
-    // In a real app, this would check domain availability via Solana Name Service
+    // Check domain availability using the Bonfida SNS implementation
     const checkAvailability = async () => {
       setIsLoading(true);
       try {
-        // Simulating API call to check domain availability
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Check if the domain is available
+        const available = await checkDomainAvailability(query);
+        setIsAvailable(available);
         
-        // For demo purposes: 
-        // - If the query is "crypto", it's already registered
-        // - Otherwise, it's available
-        if (query === "crypto") {
-          setIsAvailable(false);
-          setOwner("5Hw7...X4qV");
-          setRegistrationDate("June 12, 2023");
-          setAlternatives(["mycrypto", "cryptocoin"]);
+        // If not available, get the owner
+        if (!available) {
+          const domainOwner = await getDomainOwner(query);
+          setOwner(domainOwner);
+          
+          // For now, we don't have registration date from the blockchain
+          // This would require additional data fetching in a production app
+          setRegistrationDate("N/A");
         } else {
-          setIsAvailable(true);
           setOwner(null);
           setRegistrationDate(null);
-          setAlternatives([`${query}coin`, `my${query}`]);
         }
+        
+        // Generate alternative domain suggestions
+        // In a production app, we would verify these are actually available
+        const alternativeDomains = generateAlternatives(query);
+        setAlternatives(alternativeDomains);
       } catch (error) {
+        console.error("Error checking domain:", error);
         toast({
           variant: "destructive",
           title: "Error",
-          description: "Failed to check domain availability",
+          description: "Failed to check domain availability. Network issues or rate limiting may be occurring.",
         });
+        
+        // Set fallback values in case of error
+        setIsAvailable(null);
+        setOwner(null);
+        setAlternatives([]);
       } finally {
         setIsLoading(false);
       }
