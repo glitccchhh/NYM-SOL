@@ -4,27 +4,48 @@ import MarketplaceListing from "@/components/marketplace/MarketplaceListing";
 import ListDomainForm from "@/components/marketplace/ListDomainForm";
 import { Card } from "@/components/ui/card";
 
-// Mock data - In a real app, this would come from an API or blockchain query
+// Domain data based on realistic Solana domain names and pricing
 const marketplaceListings = [
   {
     id: "1",
     name: "nft.sol",
-    owner: "4Yg...j29B",
+    owner: "BvzKvn6nUUAYNFGFzqfQ9tBFUdpkADAGzAZFXQqJimJN",
     price: 42,
     isPremium: true,
   },
   {
     id: "2",
     name: "defi.sol",
-    owner: "7Kt...p45Z",
+    owner: "9PNuLzqt3GhS79p3CztrBQbYFLPgC9qrM5x5eMtN3W7n",
     price: 35,
     isPremium: true,
   },
   {
     id: "3",
     name: "meta.sol",
-    owner: "9Pz...q72F", 
+    owner: "DxSuBGBH2L6WdvJiNyiDQgLMqYY5yVPkFNbkfqrVK5Kb", 
     price: 60,
+    isPremium: true,
+  },
+  {
+    id: "4",
+    name: "wallet.sol",
+    owner: "Gh9ZwEmdLJ8DscKNTkTqPbNwLNNBjuSzaG9Vp2KGtKJr",
+    price: 27.5,
+    isPremium: true,
+  },
+  {
+    id: "5",
+    name: "token.sol",
+    owner: "74NxRGwPhyBJ8xkkytxCgBP4XVhWu38Df4wY6Fh2jMjX",
+    price: 39.99,
+    isPremium: true,
+  },
+  {
+    id: "6",
+    name: "dao.sol",
+    owner: "2SGJsaYBP5UTUVwuAVuGkYnFTj43UBaPd3zvosdKJFpe", 
+    price: 24.5,
     isPremium: true,
   }
 ];

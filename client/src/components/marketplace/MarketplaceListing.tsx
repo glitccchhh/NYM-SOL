@@ -46,7 +46,7 @@ export default function MarketplaceListing({ listing }: ListingProps) {
         </h3>
         <div className="flex justify-between items-center mt-2">
           <span className="text-gray-300 text-sm">
-            Listed by: <span className="font-mono">{listing.owner}</span>
+            Listed by: <span className="font-mono">{listing.owner.substring(0, 4)}...{listing.owner.substring(listing.owner.length - 4)}</span>
           </span>
           {listing.isPremium && (
             <Badge variant="premium" className="text-xs px-2 py-1">Premium</Badge>
