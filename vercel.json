@@ -1,31 +1,19 @@
 {
   "version": 2,
-  "public": true,
-  "cleanUrls": true,
-  "trailingSlash": false,
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "buildCommand": "npm run build",
+  "outputDirectory": "server/public",
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "^/assets/(.*)", "dest": "/assets/$1", "headers": { "cache-control": "public, max-age=31536000, immutable" } },
+    { "src": "^/(?!api)(.*)", "dest": "/api/app" },
+    { "handle": "filesystem" }
   ],
   "functions": {
     "api/**/*.js": {
-      "includeFiles": "dist/**"
+      "runtime": "nodejs18.x"
     }
   },
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "DENY" },
-        { "key": "X-XSS-Protection", "value": "1; mode=block" }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    }
-  ]
+  "env": {
+    "NODE_ENV": "production"
+  }
 }

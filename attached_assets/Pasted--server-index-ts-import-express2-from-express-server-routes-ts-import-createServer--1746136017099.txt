@@ -1,0 +1,583 @@
+// server/index.ts
+import express2 from "express";
+
+// server/routes.ts
+import { createServer } from "http";
+
+// server/storage.ts
+var MemStorage = class {
+  users;
+  domains;
+  domainRecords;
+  marketplaceListings;
+  vanityWallets;
+  userId;
+  domainId;
+  recordId;
+  listingId;
+  walletId;
+  constructor() {
+    this.users = /* @__PURE__ */ new Map();
+    this.domains = /* @__PURE__ */ new Map();
+    this.domainRecords = /* @__PURE__ */ new Map();
+    this.marketplaceListings = /* @__PURE__ */ new Map();
+    this.vanityWallets = /* @__PURE__ */ new Map();
+    this.userId = 1;
+    this.domainId = 1;
+    this.recordId = 1;
+    this.listingId = 1;
+    this.walletId = 1;
+  }
+  // User operations
+  async getUser(id) {
+    return this.users.get(id);
+  }
+  async getUserByUsername(username) {
+    return Array.from(this.users.values()).find(
+      (user) => user.username === username
+    );
+  }
+  async getUserByWalletAddress(walletAddress) {
+    return Array.from(this.users.values()).find(
+      (user) => user.walletAddress === walletAddress
+    );
+  }
+  async createUser(insertUser) {
+    const id = this.userId++;
+    const now = /* @__PURE__ */ new Date();
+    const user = { ...insertUser, id, createdAt: now };
+    this.users.set(id, user);
+    return user;
+  }
+  async updateUser(id, data) {
+    const user = this.users.get(id);
+    if (!user) return void 0;
+    const updatedUser = { ...user, ...data };
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+  // Domain operations
+  async getDomain(id) {
+    return this.domains.get(id);
+  }
+  async getDomainByName(name) {
+    return Array.from(this.domains.values()).find(
+      (domain) => domain.name.toLowerCase() === name.toLowerCase()
+    );
+  }
+  async getDomainsByOwner(owner) {
+    return Array.from(this.domains.values()).filter(
+      (domain) => domain.owner === owner
+    );
+  }
+  async createDomain(insertDomain) {
+    const id = this.domainId++;
+    const now = /* @__PURE__ */ new Date();
+    const domain = { ...insertDomain, id, registeredAt: now };
+    this.domains.set(id, domain);
+    return domain;
+  }
+  async updateDomain(id, data) {
+    const domain = this.domains.get(id);
+    if (!domain) return void 0;
+    const updatedDomain = { ...domain, ...data };
+    this.domains.set(id, updatedDomain);
+    return updatedDomain;
+  }
+  async deleteDomain(id) {
+    return this.domains.delete(id);
+  }
+  // Domain record operations
+  async getDomainRecords(domainId) {
+    return Array.from(this.domainRecords.values()).filter(
+      (record) => record.domainId === domainId
+    );
+  }
+  async getDomainRecord(id) {
+    return this.domainRecords.get(id);
+  }
+  async getDomainRecordByType(domainId, recordType) {
+    return Array.from(this.domainRecords.values()).find(
+      (record) => record.domainId === domainId && record.recordType === recordType
+    );
+  }
+  async createDomainRecord(insertRecord) {
+    const id = this.recordId++;
+    const now = /* @__PURE__ */ new Date();
+    const record = { ...insertRecord, id, updatedAt: now };
+    this.domainRecords.set(id, record);
+    return record;
+  }
+  async updateDomainRecord(id, data) {
+    const record = this.domainRecords.get(id);
+    if (!record) return void 0;
+    const now = /* @__PURE__ */ new Date();
+    const updatedRecord = { ...record, ...data, updatedAt: now };
+    this.domainRecords.set(id, updatedRecord);
+    return updatedRecord;
+  }
+  async deleteDomainRecord(id) {
+    return this.domainRecords.delete(id);
+  }
+  // Marketplace operations
+  async getMarketplaceListings() {
+    return Array.from(this.marketplaceListings.values()).filter(
+      (listing) => listing.isActive
+    );
+  }
+  async getMarketplaceListing(id) {
+    return this.marketplaceListings.get(id);
+  }
+  async getListingsByDomain(domainId) {
+    return Array.from(this.marketplaceListings.values()).filter(
+      (listing) => listing.domainId === domainId && listing.isActive
+    );
+  }
+  async getListingsBySeller(seller) {
+    return Array.from(this.marketplaceListings.values()).filter(
+      (listing) => listing.seller === seller && listing.isActive
+    );
+  }
+  async createMarketplaceListing(insertListing) {
+    const id = this.listingId++;
+    const now = /* @__PURE__ */ new Date();
+    const listing = { ...insertListing, id, listedAt: now };
+    this.marketplaceListings.set(id, listing);
+    return listing;
+  }
+  async updateMarketplaceListing(id, data) {
+    const listing = this.marketplaceListings.get(id);
+    if (!listing) return void 0;
+    const updatedListing = { ...listing, ...data };
+    this.marketplaceListings.set(id, updatedListing);
+    return updatedListing;
+  }
+  async deleteMarketplaceListing(id) {
+    return this.marketplaceListings.delete(id);
+  }
+  // Vanity wallet operations
+  async getVanityWallets(userId) {
+    return Array.from(this.vanityWallets.values()).filter(
+      (wallet) => wallet.userId === userId
+    );
+  }
+  async getVanityWallet(id) {
+    return this.vanityWallets.get(id);
+  }
+  async getVanityWalletByPublicKey(publicKey) {
+    return Array.from(this.vanityWallets.values()).find(
+      (wallet) => wallet.publicKey === publicKey
+    );
+  }
+  async createVanityWallet(insertWallet) {
+    const id = this.walletId++;
+    const now = /* @__PURE__ */ new Date();
+    const wallet = { ...insertWallet, id, createdAt: now };
+    this.vanityWallets.set(id, wallet);
+    return wallet;
+  }
+  async deleteVanityWallet(id) {
+    return this.vanityWallets.delete(id);
+  }
+};
+var storage = new MemStorage();
+
+// shared/schema.ts
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
+import { createInsertSchema } from "drizzle-zod";
+var users = pgTable("users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  walletAddress: text("wallet_address"),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var domains = pgTable("domains", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull().unique(),
+  owner: text("owner").notNull(),
+  registeredAt: timestamp("registered_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  isDefault: boolean("is_default").default(false)
+});
+var domainRecords = pgTable("domain_records", {
+  id: serial("id").primaryKey(),
+  domainId: integer("domain_id").notNull().references(() => domains.id),
+  recordType: text("record_type").notNull(),
+  // e.g. 'twitter', 'ipfs', 'bio'
+  value: text("value").notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});
+var marketplaceListings = pgTable("marketplace_listings", {
+  id: serial("id").primaryKey(),
+  domainId: integer("domain_id").notNull().references(() => domains.id),
+  price: integer("price").notNull(),
+  // Price in lamports (1 SOL = 1,000,000,000 lamports)
+  seller: text("seller").notNull(),
+  listedAt: timestamp("listed_at").defaultNow().notNull(),
+  isActive: boolean("is_active").default(true)
+});
+var vanityWallets = pgTable("vanity_wallets", {
+  id: serial("id").primaryKey(),
+  prefix: text("prefix").notNull(),
+  publicKey: text("public_key").notNull().unique(),
+  userId: integer("user_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull()
+});
+var insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true
+});
+var insertDomainSchema = createInsertSchema(domains).omit({
+  id: true,
+  registeredAt: true
+});
+var insertDomainRecordSchema = createInsertSchema(domainRecords).omit({
+  id: true,
+  updatedAt: true
+});
+var insertMarketplaceListingSchema = createInsertSchema(marketplaceListings).omit({
+  id: true,
+  listedAt: true
+});
+var insertVanityWalletSchema = createInsertSchema(vanityWallets).omit({
+  id: true,
+  createdAt: true
+});
+
+// server/routes.ts
+import { z } from "zod";
+var validateBody = (schema) => {
+  return (req, res, next) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({
+          message: "Validation error",
+          errors: error.errors
+        });
+      }
+      next(error);
+    }
+  };
+};
+async function registerRoutes(app2) {
+  const apiPrefix = "/api";
+  app2.get(`${apiPrefix}/domains`, async (req, res) => {
+    const owner = req.query.owner;
+    if (owner) {
+      const domains3 = await storage.getDomainsByOwner(owner);
+      return res.json(domains3);
+    }
+    const domains2 = await storage.getDomainsByOwner("");
+    res.json(domains2);
+  });
+  app2.get(`${apiPrefix}/domains/:name`, async (req, res) => {
+    const name = req.params.name;
+    const domain = await storage.getDomainByName(name);
+    if (!domain) {
+      return res.status(404).json({ message: "Domain not found" });
+    }
+    res.json(domain);
+  });
+  app2.post(
+    `${apiPrefix}/domains`,
+    validateBody(insertDomainSchema),
+    async (req, res) => {
+      const { name, owner, expiresAt, isDefault } = req.body;
+      const existingDomain = await storage.getDomainByName(name);
+      if (existingDomain) {
+        return res.status(409).json({ message: "Domain already registered" });
+      }
+      try {
+        const domain = await storage.createDomain({
+          name,
+          owner,
+          expiresAt,
+          isDefault
+        });
+        res.status(201).json(domain);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to register domain" });
+      }
+    }
+  );
+  app2.put(
+    `${apiPrefix}/domains/:id`,
+    validateBody(insertDomainSchema.partial()),
+    async (req, res) => {
+      const id = parseInt(req.params.id);
+      const updates = req.body;
+      const domain = await storage.getDomain(id);
+      if (!domain) {
+        return res.status(404).json({ message: "Domain not found" });
+      }
+      try {
+        const updatedDomain = await storage.updateDomain(id, updates);
+        res.json(updatedDomain);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to update domain" });
+      }
+    }
+  );
+  app2.get(`${apiPrefix}/domains/:domainId/records`, async (req, res) => {
+    const domainId = parseInt(req.params.domainId);
+    const domain = await storage.getDomain(domainId);
+    if (!domain) {
+      return res.status(404).json({ message: "Domain not found" });
+    }
+    const records = await storage.getDomainRecords(domainId);
+    res.json(records);
+  });
+  app2.post(
+    `${apiPrefix}/domains/:domainId/records`,
+    validateBody(insertDomainRecordSchema),
+    async (req, res) => {
+      const domainId = parseInt(req.params.domainId);
+      const { recordType, value } = req.body;
+      const domain = await storage.getDomain(domainId);
+      if (!domain) {
+        return res.status(404).json({ message: "Domain not found" });
+      }
+      const existingRecord = await storage.getDomainRecordByType(domainId, recordType);
+      if (existingRecord) {
+        const updatedRecord = await storage.updateDomainRecord(existingRecord.id, { value });
+        return res.json(updatedRecord);
+      }
+      try {
+        const record = await storage.createDomainRecord({
+          domainId,
+          recordType,
+          value
+        });
+        res.status(201).json(record);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to create record" });
+      }
+    }
+  );
+  app2.get(`${apiPrefix}/marketplace`, async (req, res) => {
+    const listings = await storage.getMarketplaceListings();
+    const listingsWithDomains = await Promise.all(
+      listings.map(async (listing) => {
+        const domain = await storage.getDomain(listing.domainId);
+        return {
+          ...listing,
+          domain
+        };
+      })
+    );
+    res.json(listingsWithDomains);
+  });
+  app2.post(
+    `${apiPrefix}/marketplace`,
+    validateBody(insertMarketplaceListingSchema),
+    async (req, res) => {
+      const { domainId, price, seller } = req.body;
+      const domain = await storage.getDomain(domainId);
+      if (!domain) {
+        return res.status(404).json({ message: "Domain not found" });
+      }
+      if (domain.owner !== seller) {
+        return res.status(403).json({ message: "You don't own this domain" });
+      }
+      const existingListings = await storage.getListingsByDomain(domainId);
+      if (existingListings.length > 0) {
+        return res.status(409).json({ message: "Domain already listed" });
+      }
+      try {
+        const listing = await storage.createMarketplaceListing({
+          domainId,
+          price,
+          seller,
+          isActive: true
+        });
+        res.status(201).json(listing);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to create listing" });
+      }
+    }
+  );
+  app2.post(
+    `${apiPrefix}/vanity-wallets`,
+    validateBody(insertVanityWalletSchema),
+    async (req, res) => {
+      const { prefix, publicKey, userId } = req.body;
+      try {
+        const wallet = await storage.createVanityWallet({
+          prefix,
+          publicKey,
+          userId
+        });
+        res.status(201).json(wallet);
+      } catch (error) {
+        res.status(500).json({ message: "Failed to save vanity wallet" });
+      }
+    }
+  );
+  app2.get(`${apiPrefix}/vanity-wallets`, async (req, res) => {
+    const userId = parseInt(req.query.userId);
+    if (!userId) {
+      return res.status(400).json({ message: "userId is required" });
+    }
+    const wallets = await storage.getVanityWallets(userId);
+    res.json(wallets);
+  });
+  const httpServer = createServer(app2);
+  return httpServer;
+}
+
+// server/vite.ts
+import express from "express";
+import fs from "fs";
+import path2 from "path";
+import { createServer as createViteServer, createLogger } from "vite";
+
+// vite.config.ts
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
+import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+var vite_config_default = defineConfig({
+  plugins: [
+    react(),
+    runtimeErrorOverlay(),
+    ...process.env.NODE_ENV !== "production" && process.env.REPL_ID !== void 0 ? [
+      await import("@replit/vite-plugin-cartographer").then(
+        (m) => m.cartographer()
+      )
+    ] : []
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "client", "src"),
+      "@shared": path.resolve(import.meta.dirname, "shared"),
+      "@assets": path.resolve(import.meta.dirname, "attached_assets")
+    }
+  },
+  root: path.resolve(import.meta.dirname, "client"),
+  build: {
+    outDir: path.resolve(import.meta.dirname, "dist/public"),
+    emptyOutDir: true
+  }
+});
+
+// server/vite.ts
+import { nanoid } from "nanoid";
+var viteLogger = createLogger();
+function log(message, source = "express") {
+  const formattedTime = (/* @__PURE__ */ new Date()).toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  });
+  console.log(`${formattedTime} [${source}] ${message}`);
+}
+async function setupVite(app2, server) {
+  const serverOptions = {
+    middlewareMode: true,
+    hmr: { server },
+    allowedHosts: true
+  };
+  const vite = await createViteServer({
+    ...vite_config_default,
+    configFile: false,
+    customLogger: {
+      ...viteLogger,
+      error: (msg, options) => {
+        viteLogger.error(msg, options);
+        process.exit(1);
+      }
+    },
+    server: serverOptions,
+    appType: "custom"
+  });
+  app2.use(vite.middlewares);
+  app2.use("*", async (req, res, next) => {
+    const url = req.originalUrl;
+    try {
+      const clientTemplate = path2.resolve(
+        import.meta.dirname,
+        "..",
+        "client",
+        "index.html"
+      );
+      let template = await fs.promises.readFile(clientTemplate, "utf-8");
+      template = template.replace(
+        `src="/src/main.tsx"`,
+        `src="/src/main.tsx?v=${nanoid()}"`
+      );
+      const page = await vite.transformIndexHtml(url, template);
+      res.status(200).set({ "Content-Type": "text/html" }).end(page);
+    } catch (e) {
+      vite.ssrFixStacktrace(e);
+      next(e);
+    }
+  });
+}
+function serveStatic(app2) {
+  const distPath = path2.resolve(import.meta.dirname, "public");
+  if (!fs.existsSync(distPath)) {
+    throw new Error(
+      `Could not find the build directory: ${distPath}, make sure to build the client first`
+    );
+  }
+  app2.use(express.static(distPath));
+  app2.use("*", (_req, res) => {
+    res.sendFile(path2.resolve(distPath, "index.html"));
+  });
+}
+
+// server/index.ts
+var app = express2();
+app.use(express2.json());
+app.use(express2.urlencoded({ extended: false }));
+app.use((req, res, next) => {
+  const start = Date.now();
+  const path3 = req.path;
+  let capturedJsonResponse = void 0;
+  const originalResJson = res.json;
+  res.json = function(bodyJson, ...args) {
+    capturedJsonResponse = bodyJson;
+    return originalResJson.apply(res, [bodyJson, ...args]);
+  };
+  res.on("finish", () => {
+    const duration = Date.now() - start;
+    if (path3.startsWith("/api")) {
+      let logLine = `${req.method} ${path3} ${res.statusCode} in ${duration}ms`;
+      if (capturedJsonResponse) {
+        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+      }
+      if (logLine.length > 80) {
+        logLine = logLine.slice(0, 79) + "\u2026";
+      }
+      log(logLine);
+    }
+  });
+  next();
+});
+(async () => {
+  const server = await registerRoutes(app);
+  app.use((err, _req, res, _next) => {
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+    throw err;
+  });
+  if (app.get("env") === "development") {
+    await setupVite(app, server);
+  } else {
+    serveStatic(app);
+  }
+  const port = 5e3;
+  server.listen({
+    port,
+    host: "0.0.0.0",
+    reusePort: true
+  }, () => {
+    log(`serving on port ${port}`);
+  });
+})();
