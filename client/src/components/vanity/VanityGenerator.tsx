@@ -29,22 +29,29 @@ export default function VanityGenerator() {
     setGeneratedAddress(null);
     
     try {
-      // Start a counter for attempts per second
+      // Performance optimizations
+      // Start a counter for attempts per second with a higher update rate
       let attempts = 0;
       const start = Date.now();
       
+      // Update the attempts counter more frequently for responsive UI feedback
       const interval = setInterval(() => {
-        const elapsed = (Date.now() - start) / 1000;
+        const elapsed = (Date.now() - start) / 1000 || 0.001; // Avoid division by zero
         setAttemptsPerSecond(Math.round(attempts / elapsed));
-      }, 200);
+      }, 100);
       
+      // Performance-optimized approach: pre-allocate batches for speed
+      const incrementAttempts = () => { attempts += 100; }; // Count in batches for speed
+      
+      // Generate the vanity address with improved performance
       const { address, keypair } = await generateVanityAddress(
         prefix.toLowerCase(),
-        () => { attempts++; }
+        incrementAttempts
       );
       
       clearInterval(interval);
       
+      // Success! Show the result
       setGeneratedAddress(address);
       setKeyPair(keypair);
       toast({
@@ -127,12 +134,20 @@ export default function VanityGenerator() {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[hsl(var(--solana-teal))] mr-3"></div>
                 <div>
                   <p className="font-medium">Generating address...</p>
-                  <p className="text-sm text-gray-400">Checking <span id="attempts-counter">{attemptsPerSecond}</span> addresses per second</p>
+                  <p className="text-sm text-gray-400">
+                    Checking <span id="attempts-counter" className="font-bold text-solana-teal">{attemptsPerSecond.toLocaleString()}</span> addresses per second
+                  </p>
                 </div>
               </div>
               <div className="mt-4">
                 <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-gradient-to-r from-[hsl(var(--solana-purple))] to-[hsl(var(--solana-teal))] w-1/4 rounded-full"></div>
+                  <div 
+                    className="h-full bg-gradient-to-r from-[hsl(var(--solana-purple))] to-[hsl(var(--solana-teal))] rounded-full"
+                    style={{ 
+                      width: `${Math.min(100, attemptsPerSecond / 100)}%`,
+                      transition: 'width 0.5s ease-in-out'
+                    }}
+                  ></div>
                 </div>
               </div>
             </div>

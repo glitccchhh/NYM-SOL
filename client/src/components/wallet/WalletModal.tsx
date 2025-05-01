@@ -44,9 +44,9 @@ export default function WalletModal({ isOpen, onClose }: WalletModalProps) {
   if (!mounted || !isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[1000]" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/80 flex items-start justify-center z-[1000]" onClick={onClose}>
       <Card 
-        className="bg-darkBg border border-[hsl(var(--solana-purple))] max-w-md w-full m-4 relative" 
+        className="bg-darkBg border border-[hsl(var(--solana-purple))] max-w-md w-full m-4 relative mt-32" 
         onClick={(e) => e.stopPropagation()}
       >
         <CardHeader className="flex justify-between items-center">

@@ -1,0 +1,81 @@
+Here's how to go full mainnet and replace your mocked .sol domain data with live Solana Name Service (SNS) data.
+
+🔧 Step-by-Step: Replacing Mock with Real SNS Data
+✅ 1. Set Up Your Environment
+You’ll need:
+
+A Solana RPC endpoint (preferably a free one from Helius, QuickNode, or Alchemy)
+
+Wallet adapter (you probably already have this via Solana Wallet Adapter)
+
+Install Bonfida SNS libraries
+
+bash
+Copy
+Edit
+npm install @bonfida/spl-name-service @solana/web3.js
+🔎 2. Live Domain Search (Availability + Owner)
+Replace your mock search logic with this:
+
+js
+Copy
+Edit
+import {
+  getHashedName,
+  getNameAccountKey,
+  NameRegistryState
+} from '@bonfida/spl-name-service';
+import { Connection, PublicKey } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+
+export async function checkDomain(domain) {
+  const name = domain.replace('.sol', '');
+
+  const hashedName = await getHashedName(name);
+  const nameAccountKey = await getNameAccountKey(hashedName, undefined);
+
+  try {
+    const registry = await NameRegistryState.retrieve(connection, nameAccountKey);
+    return {
+      available: false,
+      owner: registry.owner.toBase58()
+    };
+  } catch (err) {
+    return {
+      available: true,
+      owner: null
+    };
+  }
+}
+🧠 This tells you if a domain is registered, and if it is, returns the owner wallet address.
+
+💡 3. Real Alternatives (Smart Suggestions)
+When a domain is taken, suggest:
+
+[name]xyz.sol
+
+its[name].sol
+
+[name]sol.sol
+
+Just modify the above checkDomain() for each suggestion, run in parallel, and display the available ones.
+
+🛒 4. Live Marketplace Listings (Optional Advanced)
+You can integrate Bonfida's .sol domain marketplace by fetching listings from their API:
+
+bash
+Copy
+Edit
+GET https://sns-api.bonfida.com/domain/available/<domain>.sol
+Or look into their open GraphQL API / Magic Eden NFT endpoint for .sol subdomain listings.
+
+🧠 BONUS TIP: Use @solana/web3.js to interact with wallets & signatures when connecting domain registration, vanity address binding, etc.
+✅ What to Replace in Your App
+Section	Replace With
+🔍 Search logic	Use checkDomain() to pull real SNS data
+🟢 Availability mock	Real-time Solana-based status
+🧑 Owner info	Pull owner address from NameRegistryState
+💬 Suggestions	Generate programmatically & check them live
+🛒 Marketplace	Pull listings from Bonfida API or Magic Eden
+
