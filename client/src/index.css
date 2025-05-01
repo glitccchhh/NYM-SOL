@@ -1,0 +1,137 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Override with Solana-inspired colors */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --primary: 270 100% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --accent: 158 92% 50%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --ring: 240 4.9% 83.9%;
+    --radius: 0.5rem;
+
+    /* Custom Solana colors */
+    --solana-purple: 270 100% 63%;
+    --solana-teal: 158 92% 50%;
+    --solana-blue: 196 100% 50%;
+    --dark-bg: 240 10% 3.9%;
+    --success: 158 92% 50%;
+    --error: 0 84.2% 60.2%;
+    --warning: 36 100% 60%;
+  }
+
+  body {
+    @apply font-sans antialiased min-h-screen;
+    background-color: hsl(var(--dark-bg));
+    color: hsl(var(--foreground));
+  }
+
+  * {
+    @apply border-border;
+  }
+}
+
+/* Custom animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Domain search input animation */
+.search-focus {
+  transition: all 0.3s ease;
+}
+
+.search-focus:focus {
+  transform: scale(1.02);
+}
+
+/* Domain card hover animation */
+.domain-card {
+  transition: all 0.25s ease;
+}
+
+.domain-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Button hover effects */
+.btn-hover {
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-hover:after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+  transition: all 0.6s ease;
+}
+
+.btn-hover:hover:after {
+  left: 100%;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--dark-bg));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--solana-purple));
+  border-radius: 3px;
+}
+
+.solana-gradient {
+  @apply bg-gradient-to-r from-[#9945FF] to-[#00C2FF];
+}
+
+.from-solana-purple {
+  --tw-gradient-from: hsl(var(--solana-purple));
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, hsla(var(--solana-purple) / 0));
+}
+
+.to-solana-blue {
+  --tw-gradient-to: hsl(var(--solana-blue));
+}
+
+.text-solana-teal {
+  color: hsl(var(--solana-teal));
+}
+
+.bg-darkBg {
+  background-color: hsl(var(--dark-bg));
+}
+
+.border-solana-purple {
+  border-color: hsl(var(--solana-purple) / 0.3);
+}
