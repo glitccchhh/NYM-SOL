@@ -64,6 +64,19 @@
 
 .search-focus:focus {
   transform: scale(1.02);
+  box-shadow: 0 0 0 2px hsl(var(--solana-teal) / 0.3);
+  border-color: hsl(var(--solana-teal));
+}
+
+/* Enhanced search bar styling */
+.search-bar {
+  transition: all 0.3s ease;
+}
+
+.search-bar:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--solana-teal) / 0.2);
+  border-color: hsl(var(--solana-teal));
 }
 
 /* Domain card hover animation */
@@ -73,6 +86,8 @@
 
 .domain-card:hover {
   transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(146, 50, 250, 0.2);
+  border-color: hsl(var(--solana-purple) / 0.6);
 }
 
 /* Button hover effects */
