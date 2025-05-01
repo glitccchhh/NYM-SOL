@@ -1,0 +1,6 @@
+{
+  "name": "NymSOL",
+  "buildCommand": "npm run build",
+  "startCommand": "npm run start",
+  "deployCommand": "vercel --prod"
+}
